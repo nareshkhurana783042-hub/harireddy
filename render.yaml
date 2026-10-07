@@ -1,0 +1,25 @@
+# Render.com deployment configuration
+# 1. Create a free account at https://render.com
+# 2. Click "New +" → "Web Service"
+# 3. Connect your GitHub repo or use "Deploy from existing repository"
+# 4. Render will auto-detect this render.yaml
+
+services:
+  - type: web
+    name: ai-lost-found-matcher
+    env: node
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+    # Note: Render Free plan does not support persistent disks.
+    # If upgrading to a Starter/Paid plan, you can uncomment below:
+    # disk:
+    #   name: data
+    #   mountPath: /opt/render/project/src/server/data
+    #   sizeGB: 1

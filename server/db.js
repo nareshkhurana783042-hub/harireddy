@@ -4,9 +4,11 @@ const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 
-const dir = path.join(__dirname, 'data');
-if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-const file = path.join(dir, 'lost-found.sqlite');
+// Data directory: supports custom DATA_DIR or default local directory
+const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+const file = path.join(dataDir, 'lost-found.sqlite');
 
 function createAdapter(nativeDb) {
   const persist = () => fs.writeFileSync(file, Buffer.from(nativeDb.export()));

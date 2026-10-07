@@ -2,6 +2,7 @@
 const express = require('express'); const cors = require('cors'); const bcrypt = require('bcryptjs'); const jwt = require('jsonwebtoken'); const multer = require('multer'); const path = require('path'); const fs = require('fs');
 const db = await require('./db'); const { similarity } = require('./matcher');
 const app = express(); const PORT = process.env.PORT || 4000; const SECRET = process.env.JWT_SECRET || 'change-this-secret-before-deployment';
+const IS_PROD = process.env.NODE_ENV === 'production';
 app.use(cors()); app.use(express.json()); app.use('/uploads', express.static(path.join(__dirname,'uploads')));
 const uploadDir=path.join(__dirname,'uploads'); if(!fs.existsSync(uploadDir))fs.mkdirSync(uploadDir,{recursive:true});
 const storage=multer.diskStorage({destination:uploadDir,filename:(req,file,cb)=>cb(null,Date.now()+'-'+Math.random().toString(36).slice(2)+path.extname(file.originalname).slice(0,10))});
@@ -40,10 +41,19 @@ app.post('/api/items/:type/:id/recovered',auth,(req,res)=>{const table=req.param
 app.get('/api/admin/overview',auth,admin,(req,res)=>{const count=t=>db.prepare(`SELECT COUNT(*) n FROM ${t}`).get().n;res.json({stats:{users:count('Users'),lost:count('Lost_Items'),found:count('Found_Items'),matches:count('Matches'),recovered:db.prepare("SELECT (SELECT COUNT(*) FROM Lost_Items WHERE status='recovered')+(SELECT COUNT(*) FROM Found_Items WHERE status='recovered') n").get().n,pending:db.prepare("SELECT (SELECT COUNT(*) FROM Lost_Items WHERE status='lost')+(SELECT COUNT(*) FROM Found_Items WHERE status='found') n").get().n},users:db.prepare('SELECT id,name,email,role,created_at FROM Users ORDER BY created_at DESC LIMIT 50').all(),lost:db.prepare('SELECT * FROM Lost_Items ORDER BY created_at DESC').all().map(x=>toItem(x,'lost')),found:db.prepare('SELECT * FROM Found_Items ORDER BY created_at DESC').all().map(x=>toItem(x,'found'))})});
 app.patch('/api/admin/items/:type/:id',auth,admin,(req,res)=>{const table=req.params.type==='lost'?'Lost_Items':'Found_Items';const {status}=req.body;if(!['lost','found','recovered','closed'].includes(status))return res.status(400).json({error:'Invalid status.'});const r=db.prepare(`UPDATE ${table} SET status=? WHERE id=?`).run(status,req.params.id);if(!r.changes)return res.status(404).json({error:'Report not found.'});res.json({ok:true})});
 app.use((err,req,res,next)=>{if(err instanceof multer.MulterError)return res.status(400).json({error:err.code==='LIMIT_FILE_SIZE'?'Image must be 5 MB or smaller.':'Image upload failed.'});console.error(err);res.status(500).json({error:'Unexpected server error.'})});
-app.get("/", (req, res) => {
-  res.json({
-    message: "AI Lost & Found API is running successfully!"
+
+// Serve React app in production
+if (IS_PROD) {
+  const distPath = path.join(__dirname, '..', 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
   });
-});
+} else {
+  app.get("/", (req, res) => {
+    res.json({ message: "AI Lost & Found API is running successfully!" });
+  });
+}
+
 app.listen(PORT,()=>console.log(`AI Lost & Found API running at http://localhost:${PORT}`));
 })().catch((error) => { console.error('Failed to start AI Lost & Found Matcher:', error); process.exit(1); });

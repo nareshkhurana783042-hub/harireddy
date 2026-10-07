@@ -40,6 +40,23 @@ The matcher uses a transparent weighted score: image proxy 15%, description text
 - `GET /api/dashboard`, `GET /api/notifications`, `POST /api/notifications/:id/read`
 - `GET /api/admin/overview`, `PATCH /api/admin/items/:type/:id`
 
+## Deployment (Free Hosting)
+
+### Render.com (Recommended - Free Tier with Persistent Disk)
+
+1. Fork this repo to GitHub
+2. Sign up at [render.com](https://render.com)
+3. New → Web Service → Connect your repo
+4. Render auto-detects `render.yaml` (or configure manually):
+   - **Build**: `npm ci && npm run build`
+   - **Start**: `npm start`
+   - **Health Check**: `/api/health`
+   - **Env Vars**: `NODE_ENV=production`, `JWT_SECRET` (generate), `PORT=4000`
+   - **Add Disk**: Name `data`, Mount `/opt/render/project/src/server/data`, Size `1 GB`
+5. Deploy → Live at `https://your-app.onrender.com`
+
+See [DEPLOY.md](DEPLOY.md) for detailed steps and alternatives.
+
 ## Before public deployment
 - Set a strong `JWT_SECRET` environment variable.
 - Restrict CORS to your frontend origin and configure the frontend API URL.
